@@ -1,0 +1,139 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: yaju-bot-release
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      publish: ${{ steps.meta.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: meta
+        shell: bash
+        run: |
+          VERSION="$(python - <<'PY'
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              print(tomllib.load(f)['project']['version'])
+          PY
+          )"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if curl --retry 3 --retry-delay 2 --fail --silent --show-error "https://pypi.org/pypi/yaju-bot/$VERSION/json" >/dev/null; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "yaju-bot $VERSION already exists on PyPI; release skipped."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "yaju-bot $VERSION is not on PyPI; release enabled."
+          fi
+
+  native:
+    needs: check
+    if: needs.check.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: true
+      - run: go test ./...
+      - name: Build release binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release work
+          build_tar() {
+            local goos="$1" goarch="$2" label="$3"
+            rm -rf work/*
+            CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags="-s -w" -o work/yaju-bot ./cmd/yaju-bot
+            tar -C work -czf "release/yaju-bot-${label}.tar.gz" yaju-bot
+          }
+          build_zip() {
+            local goarch="$1" label="$2"
+            rm -rf work/*
+            CGO_ENABLED=0 GOOS=windows GOARCH="$goarch" go build -trimpath -ldflags="-s -w" -o work/yaju-bot.exe ./cmd/yaju-bot
+            (cd work && zip -q "../release/yaju-bot-${label}.zip" yaju-bot.exe)
+          }
+          build_tar linux amd64 linux-amd64
+          build_tar linux arm64 linux-arm64
+          rm -rf work/*
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -trimpath -ldflags="-s -w" -o work/yaju-bot ./cmd/yaju-bot
+          tar -C work -czf release/yaju-bot-linux-armv7.tar.gz yaju-bot
+          build_tar darwin amd64 darwin-amd64
+          build_tar darwin arm64 darwin-arm64
+          build_zip amd64 windows-amd64
+          build_zip arm64 windows-arm64
+          (cd release && sha256sum *.tar.gz *.zip > checksums.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-assets
+          path: release/*
+          if-no-files-found: error
+
+  python-dist:
+    needs: check
+    if: needs.check.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --upgrade build twine
+      - run: PYTHONPATH=python python -m unittest discover -s python/tests -v
+      - run: python -m build
+      - run: python -m twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/*
+          if-no-files-found: error
+
+  github-release:
+    needs: [check, native]
+    if: needs.check.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-assets
+          path: release
+      - name: Create or update GitHub Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v${VERSION}"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" release/* --target "$GITHUB_SHA" --title "$TAG" --generate-notes --repo "$GITHUB_REPOSITORY"
+          fi
+
+  publish:
+    needs: [check, python-dist, github-release]
+    if: needs.check.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
