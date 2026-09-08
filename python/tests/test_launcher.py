@@ -19,6 +19,24 @@ class LauncherTests(unittest.TestCase):
             ("yaju-bot-linux-arm64.tar.gz", "yaju-bot"),
         )
 
+    def test_android_arm64_asset(self):
+        self.assertEqual(
+            yaju_bot._platform_asset_for("Android", "aarch64"),
+            ("yaju-bot-android-arm64.tar.gz", "yaju-bot"),
+        )
+
+    def test_android_amd64_asset(self):
+        self.assertEqual(
+            yaju_bot._platform_asset_for("Android", "x86_64"),
+            ("yaju-bot-android-amd64.tar.gz", "yaju-bot"),
+        )
+
+    def test_android_armv7_asset(self):
+        self.assertEqual(
+            yaju_bot._platform_asset_for("Android", "armv7l"),
+            ("yaju-bot-android-armv7.tar.gz", "yaju-bot"),
+        )
+
     def test_windows_asset(self):
         self.assertEqual(
             yaju_bot._platform_asset_for("Windows", "AMD64"),
