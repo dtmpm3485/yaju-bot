@@ -22,7 +22,7 @@ __all__ = ["run"]
 
 _PACKAGE = "yaju-bot"
 _REPO = "dtmpm3485/yaju-bot"
-_FALLBACK_VERSION = "0.1.0"
+_FALLBACK_VERSION = "0.1.1"
 
 try:
     __version__ = version(_PACKAGE)
@@ -59,6 +59,9 @@ def _platform_asset_for(system: str, machine: str) -> tuple[str, str]:
 
     if system == "linux":
         os_name = "linux"
+        ext = ".tar.gz"
+    elif system == "android":
+        os_name = "android"
         ext = ".tar.gz"
     elif system == "darwin":
         if arch == "armv7":
