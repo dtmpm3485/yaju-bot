@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yaju-bot"
+version = "0.1.0"
+description = "Go-powered Discord conversation intruder bot with a Python launcher"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "dtmpm3485"}]
+keywords = ["discord", "bot", "go", "python", "meme"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Go",
+  "Operating System :: OS Independent"
+]
+
+[project.urls]
+Homepage = "https://github.com/dtmpm3485/yaju-bot"
+Repository = "https://github.com/dtmpm3485/yaju-bot"
+
+[tool.setuptools]
+package-dir = {"" = "python"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["python"]
+include = ["yaju_bot*", "yajuu_bot*"]

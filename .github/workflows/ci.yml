@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: go test ./...
+      - run: PYTHONPATH=python python -c "from yaju_bot import run; from yajuu_bot import run as run2; assert callable(run) and callable(run2)"
