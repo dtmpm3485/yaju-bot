@@ -58,6 +58,14 @@ jobs:
             CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags="-s -w" -o work/yaju-bot ./cmd/yaju-bot
             tar -C work -czf "release/yaju-bot-${label}.tar.gz" yaju-bot
           }
+          build_android() {
+            local goarch="$1" label="$2" compiler="$3"
+            rm -rf work/*
+            CC="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/$compiler" \
+              CGO_ENABLED=1 GOOS=android GOARCH="$goarch" \
+              go build -trimpath -ldflags="-s -w" -o work/yaju-bot ./cmd/yaju-bot
+            tar -C work -czf "release/yaju-bot-${label}.tar.gz" yaju-bot
+          }
           build_zip() {
             local goarch="$1" label="$2"
             rm -rf work/*
@@ -69,6 +77,13 @@ jobs:
           rm -rf work/*
           CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -trimpath -ldflags="-s -w" -o work/yaju-bot ./cmd/yaju-bot
           tar -C work -czf release/yaju-bot-linux-armv7.tar.gz yaju-bot
+          build_android arm64 android-arm64 aarch64-linux-android24-clang
+          build_android amd64 android-amd64 x86_64-linux-android24-clang
+          rm -rf work/*
+          CC="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang" \
+            CGO_ENABLED=1 GOOS=android GOARCH=arm GOARM=7 \
+            go build -trimpath -ldflags="-s -w" -o work/yaju-bot ./cmd/yaju-bot
+          tar -C work -czf release/yaju-bot-android-armv7.tar.gz yaju-bot
           build_tar darwin amd64 darwin-amd64
           build_tar darwin arm64 darwin-arm64
           build_zip amd64 windows-amd64
