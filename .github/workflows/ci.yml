@@ -15,5 +15,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - run: go mod tidy
+      - run: cat go.mod && cat go.sum
       - run: go test ./...
       - run: PYTHONPATH=python python -c "from yaju_bot import run; from yajuu_bot import run as run2; assert callable(run) and callable(run2)"
