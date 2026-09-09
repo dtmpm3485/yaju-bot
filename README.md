@@ -6,7 +6,7 @@
 
 Discordの会話にたまに返信で乱入するBotです。特定キーワードやメンションでも呼び出せます。Bot本体はGoで実装されており、Pythonから起動できます。
 
-<img src="https://raw.githubusercontent.com/dtmpm3485/yaju-bot/main/assets/demo.jpg" alt="yaju-botの動作例" width="100%">
+![yaju-botの動作例](https://github.com/dtmpm3485/yaju-bot/blob/main/assets/demo.jpg?raw=true)
 
 ## 機能
 
